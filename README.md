@@ -839,10 +839,10 @@ _G.createSlider = function(parent, text, minV, maxV, default, configKey)
     hitbox.BorderSizePixel = 0
     Instance.new("UICorner", hitbox).CornerRadius = UDim.new(0,6)
 
-    -- Track interno (visual, centralizado no hitbox)
+    -- Track mais grosso e proporcional ao hitbox
     local track = Instance.new("Frame", hitbox)
-    track.Size = UDim2.new(1,-16,0,4)
-    track.Position = UDim2.new(0,8,0.5,-2)
+    track.Size = UDim2.new(1,-16,0,10)
+    track.Position = UDim2.new(0,8,0.5,-5)
     track.BackgroundColor3 = Color3.fromRGB(48,48,48)
     track.BorderSizePixel = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(1,0)
@@ -854,9 +854,9 @@ _G.createSlider = function(parent, text, minV, maxV, default, configKey)
     fill.BorderSizePixel = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 
-    -- Knob grande e visível
+    -- Knob proporcional à linha (16px — menor que antes)
     local knob = Instance.new("Frame", hitbox)
-    knob.Size = UDim2.fromOffset(26,26)
+    knob.Size = UDim2.fromOffset(16,16)
     knob.AnchorPoint = Vector2.new(0.5,0.5)
     -- posição inicial baseada no valor default
     local initPct = (default-minV)/(maxV-minV)
@@ -1002,9 +1002,12 @@ end
 
 print("Parte 4/5 carregada! Componentes prontos.")
 -- RBX4HX [ALPHA] - PARTE 5/5
--- Conteudo das Abas
+-- Conteudo das Abas + Otimizacao FPS
 
--- Atalhos locais
+local TweenService = game:GetService("TweenService")
+local Players      = game:GetService("Players")
+local L            = Players.LocalPlayer
+
 local cs  = _G.createSection
 local cl  = _G.createLabel
 local ct  = _G.createToggle
@@ -1012,27 +1015,26 @@ local csl = _G.createSlider
 local cd  = _G.createDropdown
 local ccp = _G.createColorPicker
 
--- CRIAR ABAS
 local aimTab   = _G.CreateTab("🎯 Aim")
 local espTab   = _G.CreateTab("👁 ESP")
 local fovTab   = _G.CreateTab("🔍 FOV")
 local extraTab = _G.CreateTab("⚡ Extra")
 local banTab   = _G.CreateTab("🛡 Prot")
 
--- ══════════════════════════════
+-- ══════════════════
 -- 🎯 AIM
--- ══════════════════════════════
+-- ══════════════════
 cs(aimTab, "AIMBOT UNIVERSAL")
 ct(aimTab, "Aimbot",       "aim")
 ct(aimTab, "Wall Check",   "wc")
 ct(aimTab, "Team Check",   "tc")
-csl(aimTab,"Smooth",        0.01, 2.0, 0.9,  "as")
+csl(aimTab,"Smooth",        0.01, 2.0, 0.9, "as")
 cd(aimTab, "Parte do Aim", {"Head","UpperTorso","LowerTorso","HumanoidRootPart"}, "Head", "aimpart")
 cl(aimTab, "Detecta camera FPS automaticamente")
 
--- ══════════════════════════════
+-- ══════════════════
 -- 👁 ESP
--- ══════════════════════════════
+-- ══════════════════
 cs(espTab, "ESP UNIVERSAL")
 ct(espTab, "Box ESP",      "eb")
 ct(espTab, "Tracer",       "et")
@@ -1043,9 +1045,9 @@ ccp(espTab,"Cor ESP",      Color3.fromRGB(255,0,0), "ec")
 csl(espTab,"Vel. Rainbow", 0.001, 0.02, 0.005, "rs")
 cl(espTab, "Compativel com personagens customizados")
 
--- ══════════════════════════════
+-- ══════════════════
 -- 🔍 FOV
--- ══════════════════════════════
+-- ══════════════════
 cs(fovTab, "CIRCULO FOV")
 ct(fovTab, "Mostrar FOV",  "fc")
 ct(fovTab, "Invisivel",    "invfov")
@@ -1054,21 +1056,195 @@ csl(fovTab,"Tamanho",      10,  250, 100, "fs")
 csl(fovTab,"Espessura",    1,   20,  2,   "ft")
 ccp(fovTab,"Cor FOV",      Color3.fromRGB(255,255,255), "fco")
 
--- ══════════════════════════════
+-- ══════════════════
 -- ⚡ EXTRA
--- ══════════════════════════════
+-- ══════════════════
 cs(extraTab, "MOVIMENTO")
 csl(extraTab,"WalkSpeed",    16, 85, 16, "ws")
 ct(extraTab, "Pulo Infinito","infjump")
 ct(extraTab, "Modo Seguro",  "safemode")
 cl(extraTab, "Modo Seguro: WS max 28, aim off com anti-cheat")
+
 cs(extraTab, "AFK")
 ct(extraTab, "Anti-AFK",    "antiafk")
 cl(extraTab, "Movimentos aleatorios para evitar kick AFK")
 
--- ══════════════════════════════
+cs(extraTab, "OTIMIZACAO")
+
+-- Função toast reutilizável
+local function showToast(mainText, subText)
+    task.spawn(function()
+        local toastGui = Instance.new("ScreenGui")
+        toastGui.Name = "RBX4HX_Toast"
+        toastGui.ResetOnSpawn = false
+        toastGui.DisplayOrder = 999
+        toastGui.IgnoreGuiInset = true
+        pcall(function() toastGui.Parent = game:GetService("CoreGui") end)
+        if not toastGui.Parent then toastGui.Parent = L:WaitForChild("PlayerGui") end
+
+        local toast = Instance.new("Frame", toastGui)
+        toast.Size = UDim2.fromOffset(300, 52)
+        toast.Position = UDim2.new(0.5, 0, 0, -60)
+        toast.AnchorPoint = Vector2.new(0.5, 0)
+        toast.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+        toast.BackgroundTransparency = 0.2
+        toast.BorderSizePixel = 0
+        Instance.new("UICorner", toast).CornerRadius = UDim.new(0, 12)
+        local stroke = Instance.new("UIStroke", toast)
+        stroke.Color = Color3.fromRGB(55, 55, 55)
+        stroke.Thickness = 1.2
+        stroke.Transparency = 0.4
+
+        local icon = Instance.new("TextLabel", toast)
+        icon.Size = UDim2.fromOffset(30, 52)
+        icon.Position = UDim2.new(0, 10, 0, 0)
+        icon.BackgroundTransparency = 1
+        icon.Text = "✦"
+        icon.Font = Enum.Font.GothamBold
+        icon.TextSize = 16
+        icon.TextColor3 = Color3.fromRGB(200, 200, 200)
+
+        local line = Instance.new("Frame", toast)
+        line.Size = UDim2.fromOffset(1, 30)
+        line.Position = UDim2.new(0, 44, 0.5, -15)
+        line.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+        line.BorderSizePixel = 0
+
+        local msg = Instance.new("TextLabel", toast)
+        msg.Size = UDim2.new(1, -56, 0, 22)
+        msg.Position = UDim2.new(0, 52, 0, 7)
+        msg.BackgroundTransparency = 1
+        msg.Text = mainText
+        msg.Font = Enum.Font.GothamBold
+        msg.TextSize = 12
+        msg.TextColor3 = Color3.fromRGB(225, 225, 225)
+        msg.TextXAlignment = Enum.TextXAlignment.Left
+
+        local sub = Instance.new("TextLabel", toast)
+        sub.Size = UDim2.new(1, -56, 0, 16)
+        sub.Position = UDim2.new(0, 52, 0, 28)
+        sub.BackgroundTransparency = 1
+        sub.Text = subText
+        sub.Font = Enum.Font.Gotham
+        sub.TextSize = 10
+        sub.TextColor3 = Color3.fromRGB(130, 130, 130)
+        sub.TextXAlignment = Enum.TextXAlignment.Left
+
+        local progressBg = Instance.new("Frame", toast)
+        progressBg.Size = UDim2.new(1, 0, 0, 3)
+        progressBg.Position = UDim2.new(0, 0, 1, -3)
+        progressBg.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        progressBg.BorderSizePixel = 0
+        Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
+
+        local progressFill = Instance.new("Frame", progressBg)
+        progressFill.Size = UDim2.new(1, 0, 1, 0)
+        progressFill.BackgroundColor3 = Color3.fromRGB(190, 190, 190)
+        progressFill.BorderSizePixel = 0
+        Instance.new("UICorner", progressFill).CornerRadius = UDim.new(1, 0)
+
+        TweenService:Create(toast, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, 0, 0, 18)
+        }):Play()
+        task.wait(0.4)
+        TweenService:Create(progressFill, TweenInfo.new(5, Enum.EasingStyle.Linear), {
+            Size = UDim2.new(0, 0, 1, 0)
+        }):Play()
+        task.wait(5)
+        TweenService:Create(toast,  TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position=UDim2.new(0.5,0,0,-60), BackgroundTransparency=1}):Play()
+        TweenService:Create(msg,    TweenInfo.new(0.3), {TextTransparency=1}):Play()
+        TweenService:Create(sub,    TweenInfo.new(0.3), {TextTransparency=1}):Play()
+        TweenService:Create(icon,   TweenInfo.new(0.3), {TextTransparency=1}):Play()
+        TweenService:Create(stroke, TweenInfo.new(0.3), {Transparency=1}):Play()
+        task.wait(0.4)
+        toastGui:Destroy()
+    end)
+end
+
+-- Função de otimização real
+local function optimizeFPS()
+    task.spawn(function()
+        -- Qualidade de renderização mínima
+        pcall(function()
+            settings().Rendering.QualityLevel = 1
+        end)
+
+        -- Desativa sombras e névoa
+        pcall(function()
+            local l = game:GetService("Lighting")
+            l.GlobalShadows = false
+            l.FogEnd = 100000
+            l.FogStart = 100000
+        end)
+
+        -- Desativa efeitos de pós-processamento
+        pcall(function()
+            local l = game:GetService("Lighting")
+            for _, v in ipairs(l:GetChildren()) do
+                if v:IsA("BloomEffect") or v:IsA("BlurEffect")
+                or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect")
+                or v:IsA("DepthOfFieldEffect") then
+                    v.Enabled = false
+                end
+            end
+        end)
+
+        -- Remove partículas, fumaça, fogo e faíscas
+        pcall(function()
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Smoke")
+                or v:IsA("Fire") or v:IsA("Sparkles") then
+                    v.Enabled = false
+                end
+            end
+        end)
+
+        -- Remove decoração do terreno
+        pcall(function()
+            workspace.Terrain.Decoration = false
+        end)
+    end)
+end
+
+-- Botão na aba Extra
+local btnFrame = Instance.new("Frame", extraTab)
+btnFrame.Size = UDim2.new(1,0,0,38)
+btnFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+btnFrame.BorderSizePixel = 0
+Instance.new("UICorner", btnFrame).CornerRadius = UDim.new(0,8)
+
+local optBtn = Instance.new("TextButton", btnFrame)
+optBtn.Size = UDim2.new(1,-20,0,26)
+optBtn.Position = UDim2.new(0,10,0.5,-13)
+optBtn.BackgroundColor3 = Color3.fromRGB(38,38,38)
+optBtn.Text = "⚡ Otimizar FPS"
+optBtn.Font = Enum.Font.GothamBold
+optBtn.TextSize = 12
+optBtn.TextColor3 = Color3.fromRGB(210,210,210)
+optBtn.AutoButtonColor = false
+optBtn.BorderSizePixel = 0
+Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0,7)
+Instance.new("UIStroke", optBtn).Color = Color3.fromRGB(50,50,50)
+
+optBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3=Color3.fromRGB(50,50,50)}):Play()
+    optBtn.Text = "Otimizando..."
+    optimizeFPS()
+    showToast("Otimizacao do painel", "feito com sucesso.")
+    task.wait(1)
+    optBtn.Text = "✓ Otimizado!"
+    optBtn.TextColor3 = Color3.fromRGB(80,200,80)
+    task.wait(3)
+    optBtn.Text = "⚡ Otimizar FPS"
+    optBtn.TextColor3 = Color3.fromRGB(210,210,210)
+    TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3=Color3.fromRGB(38,38,38)}):Play()
+end)
+
+cl(extraTab, "Remove particulas, sombras e efeitos pesados")
+
+-- ══════════════════
 -- 🛡 PROTECAO
--- ══════════════════════════════
+-- ══════════════════
 cs(banTab, "ANTI-BAN (4 CAMADAS)")
 ct(banTab, "Anti-Ban",     "antiban")
 ct(banTab, "Anti-Kick",    "antikick")
